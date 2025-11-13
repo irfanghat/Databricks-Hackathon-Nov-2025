@@ -1,0 +1,461 @@
+{
+  "datasets": [
+    {
+      "name": "ad8045a8",
+      "displayName": "Top components with degrading performance",
+      "queryLines": [
+        "SELECT \r\n",
+        "  name,\r\n",
+        "  (MAX(value) - MIN(value)) AS degradation_trend\r\n",
+        "FROM factory_telemetry\r\n",
+        "WHERE timestamp > current_timestamp() - INTERVAL 1 DAY\r\n",
+        "GROUP BY name\r\n",
+        "ORDER BY degradation_trend DESC\r\n",
+        "LIMIT 5;\r\n"
+      ]
+    },
+    {
+      "name": "1fd30348",
+      "displayName": "Overall system health status",
+      "queryLines": [
+        "SELECT \r\n",
+        "  severity,\r\n",
+        "  COUNT(*) AS event_count\r\n",
+        "FROM factory_telemetry\r\n",
+        "WHERE timestamp > current_timestamp() - INTERVAL 1000 MINUTES\r\n",
+        "GROUP BY severity\r\n",
+        "ORDER BY \r\n",
+        "  CASE severity\r\n",
+        "    WHEN 'critical' THEN 1\r\n",
+        "    WHEN 'warning' THEN 2\r\n",
+        "    WHEN 'normal' THEN 3\r\n",
+        "    ELSE 4\r\n",
+        "  END;"
+      ]
+    },
+    {
+      "name": "2225b085",
+      "displayName": "Top 5 most critical assets",
+      "queryLines": [
+        "SELECT \r\n",
+        "  name,\r\n",
+        "  description,\r\n",
+        "  COUNT(*) AS critical_events\r\n",
+        "FROM factory_telemetry\r\n",
+        "WHERE severity = 'critical'\r\n",
+        "  AND timestamp > current_timestamp() - INTERVAL 56 HOUR\r\n",
+        "GROUP BY name, description\r\n",
+        "ORDER BY critical_events DESC\r\n",
+        "LIMIT 5;\r\n"
+      ]
+    },
+    {
+      "name": "9472a5f2",
+      "displayName": "Predicted vs. actual temperature trend",
+      "queryLines": [
+        "SELECT \r\n",
+        "  date_trunc(\"minute\", timestamp),\r\n",
+        "  value AS actual_value,\r\n",
+        "  predicted_next AS predicted_value\r\n",
+        "FROM factory_telemetry\r\n",
+        "WHERE name = 'Temperature'\r\n",
+        "ORDER BY timestamp;\r\n"
+      ]
+    },
+    {
+      "name": "d7eb397c",
+      "displayName": "Average prediction error per metric",
+      "queryLines": [
+        "SELECT \r\n",
+        "  name,\r\n",
+        "  AVG(ABS(value - predicted_next)) AS avg_prediction_error\r\n",
+        "FROM factory_telemetry\r\n",
+        "WHERE predicted_next IS NOT NULL\r\n",
+        "GROUP BY name\r\n",
+        "ORDER BY avg_prediction_error DESC;\r\n"
+      ]
+    },
+    {
+      "name": "d6b05f1b",
+      "displayName": "Hourly power consumption",
+      "queryLines": [
+        "SELECT \r\n",
+        "  date_trunc('minute', timestamp) AS hour,\r\n",
+        "  AVG(value) AS avg_power\r\n",
+        "FROM factory_telemetry\r\n",
+        "WHERE name = 'TotalPowerConsumption'\r\n",
+        "GROUP BY hour\r\n",
+        "ORDER BY hour;\r\n"
+      ]
+    },
+    {
+      "name": "f7dfc560",
+      "displayName": "Most common alarm descriptions",
+      "queryLines": [
+        "SELECT \r\n",
+        "  description,\r\n",
+        "  COUNT(*) AS occurrences\r\n",
+        "FROM factory_telemetry\r\n",
+        "WHERE severity IN ('warning', 'critical')\r\n",
+        "GROUP BY description\r\n",
+        "ORDER BY occurrences DESC\r\n",
+        "LIMIT 10;\r\n"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "69d6f7f6",
+      "displayName": "Factory Metrics",
+      "layout": [
+        {
+          "widget": {
+            "name": "5a6ed970",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "1fd30348",
+                  "fields": [
+                    {
+                      "name": "event_count",
+                      "expression": "`event_count`"
+                    },
+                    {
+                      "name": "severity",
+                      "expression": "`severity`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "event_count",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "No. of occurences"
+                },
+                "color": {
+                  "fieldName": "severity",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Severity"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": "Overall System Health Status",
+                "description": "A summary of alarms triggered based on health status"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 0,
+            "width": 2,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "d6520d7a",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "2225b085",
+                  "fields": [
+                    {
+                      "name": "critical_events",
+                      "expression": "`critical_events`"
+                    },
+                    {
+                      "name": "name",
+                      "expression": "`name`"
+                    },
+                    {
+                      "name": "description",
+                      "expression": "`description`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "critical_events",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "No. of Critical Events"
+                },
+                "color": {
+                  "fieldName": "name",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "PassRate",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 3
+                        }
+                      },
+                      {
+                        "value": "Vibration",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 2
+                        }
+                      }
+                    ]
+                  },
+                  "displayName": "Event"
+                },
+                "extra": [
+                  {
+                    "fieldName": "description"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": "Top 5 Most Critical Assets",
+                "description": "Summary if events affecting high priority assets"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 2,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "a6a4519e",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f7dfc560",
+                  "fields": [
+                    {
+                      "name": "sum(occurrences)",
+                      "expression": "SUM(`occurrences`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(occurrences)"
+                }
+              },
+              "frame": {
+                "title": "Alarm Occurrences Counter",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "No. of times an alarm was triggered"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 2,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "635275e3",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d6b05f1b",
+                  "fields": [
+                    {
+                      "name": "minutely(hour)",
+                      "expression": "DATE_TRUNC(\"MINUTE\", `hour`)"
+                    },
+                    {
+                      "name": "avg(avg_power)",
+                      "expression": "AVG(`avg_power`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "minutely(hour)",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Timeline"
+                },
+                "y": {
+                  "fieldName": "avg(avg_power)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Aver Power (KWh)"
+                }
+              },
+              "frame": {
+                "title": "Hourly Power Consumption Trend",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Average power consumption within the hour (Configurable)"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 3,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "1a1bae0c",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "9472a5f2",
+                  "fields": [
+                    {
+                      "name": "minutely(date_trunc(minute, timestamp))",
+                      "expression": "DATE_TRUNC(\"MINUTE\", `date_trunc(minute, timestamp)`)"
+                    },
+                    {
+                      "name": "avg(actual_value)",
+                      "expression": "AVG(`actual_value`)"
+                    },
+                    {
+                      "name": "avg(predicted_value)",
+                      "expression": "AVG(`predicted_value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "minutely(date_trunc(minute, timestamp))",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Timestamp"
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "avg(actual_value)",
+                      "displayName": "Actual Value"
+                    },
+                    {
+                      "fieldName": "avg(predicted_value)",
+                      "displayName": "Predicted Value"
+                    }
+                  ]
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "title": "Actual vs. Predicted Temperature Trend",
+                "showTitle": true,
+                "showDescription": true,
+                "description": "Temperature Trend Prediction (MLFLow)"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 6,
+            "width": 3,
+            "height": 7
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "canvasBackgroundColor": {
+        "light": "#F6FAFB",
+        "dark": "#1B1F23"
+      },
+      "widgetBackgroundColor": {
+        "light": "#FFFFFF",
+        "dark": "#2A2F35"
+      },
+      "widgetBorderColor": {
+        "light": "#D7E1E9",
+        "dark": "#3C444C"
+      },
+      "fontColor": {
+        "light": "#374151",
+        "dark": "#E4E9EE"
+      },
+      "selectionColor": {
+        "light": "#5FA8D3",
+        "dark": "#5FA8D3"
+      },
+      "visualizationColors": [
+        "#5FA8D3",
+        "#70BEE1",
+        "#89CCE7",
+        "#A1DAEC",
+        "#B3E6DC",
+        "#89C7A8",
+        "#6EAD80",
+        "#589F60",
+        "#478743",
+        "#356C2A"
+      ],
+      "widgetHeaderAlignment": "LEFT"
+    },
+    "genieSpace": {
+      "isEnabled": true
+    },
+    "applyModeEnabled": false
+  }
+}
